@@ -30,11 +30,10 @@ sudo rm -rf override.conf
 sudo setcap 'cap_net_bind_service=+eip' /opt/DECK/deck
 sudo sh -c "echo '/opt/DECK/' >> /etc/ld.so.conf.d/deck.conf"
 sudo ldconfig
-systemctl --user start docker
-systemctl --user enable docker
 # clear
 # neofetch
 echo "Reloading systemd manager configuration ...";
 sudo systemctl daemon-reload
 sudo systemctl restart docker.service
+sudo setfacl -m user:$USER:rw /var/run/docker.sock
 echo "Installation has finished";
