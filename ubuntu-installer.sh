@@ -10,8 +10,10 @@ pkgs='deck'
 version='4.0.0'
 arch='amd64'
 if ! dpkg -s $pkgs >/dev/null 2>&1; then
+  echo "Downloading DECK ..."
   wget https://github.com/deck-app/stable-releases/releases/download/v4.0.0/DECK-$version-linux-$arch.deb
   sudo dpkg -i DECK-$version-linux-$arch.deb
+  git clone --single-branch --branch deck-v4 https://github.com/sfx101/deck.git ~/.deck
 fi
 export PATH=/home/$USER/bin:$PATH
 export DOCKER_HOST=unix:///run/user/$USER/docker.sock
