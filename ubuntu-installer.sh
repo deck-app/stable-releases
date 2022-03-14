@@ -1,62 +1,33 @@
 #!/bin/sh
-set +x
+#Set up the required package
 echo "Running apt update, installing dependencies"
 sudo apt update
-pkgs='apt-transport-https ca-certificates curl gnupg lsb-release'
+pkgs='curl uidmap apt-transport-https ca-certificates gnupg lsb-release docker.io docker-compose'
 if ! dpkg -s $pkgs >/dev/null 2>&1; then
   sudo apt-get install -y $pkgs
 fi
-#Docker 
-# Uninstall old version
-pkgs='docker docker-engine docker.io containerd runc'
+pkgs='deck'
+version='4.0.0'
+arch='amd64'
 if ! dpkg -s $pkgs >/dev/null 2>&1; then
-  sudo apt-get remove -y $pkgs
+  echo "Downloading DECK ..."
+  wget https://github.com/deck-app/stable-releases/releases/download/v4.0.0/DECK-$version-linux-$arch.deb
+  sudo dpkg -i DECK-$version-linux-$arch.deb
+  git clone --single-branch --branch deck-v4 https://github.com/sfx101/deck.git ~/.deck
 fi
-sudo apt update
-lsb_dist="$(. /etc/os-release && echo "$ID")"
-DOWNLOAD_URL="https://download.docker.com"
-dist_version=`lsb_release -c | awk '{print $2}'`
-curl -fsSL $DOWNLOAD_URL/linux/$lsb_dist/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-echo "Running apt update, installing dependencies"
-sudo apt update
-pkgs='docker-ce docker-ce-cli containerd.io'
-if ! dpkg -s $pkgs >/dev/null 2>&1; then
-  sudo apt-get install -y $pkgs
-fi
+export PATH=/home/$USER/bin:$PATH
+export DOCKER_HOST=unix:///run/user/$USER/docker.sock
+#List the versions available in your repo
+apt-cache madison docker-ce
 sudo usermod -aG docker $USER
-sudo sysctl enable docker
+
 echo "Staring docker";
 sudo loginctl enable-linger $(whoami)
 echo "sudo chmod 666 /var/run/docker.sock";
 sudo chmod 666 /var/run/docker.sock
-printf '\nDocker installed successfully\n\n'
-
-printf '\nDECK installation start.....\n\n'
-pkgs='deck'
-version=$(curl https://get-deck.com/latest.version)
-arch=`dpkg --print-architecture`
-if ! dpkg -s $pkgs >/dev/null 2>&1; then
-wget https://github.com/sfx101/deck/releases/download/$version/DECK-$version-$arch.deb
-sudo dpkg -i DECK-$version-$arch.deb
-fi
-printf '\nDECK installed successfully\n\n'
-
-printf 'Waiting for Docker-composer installation start .... \n\n'
 compose=$(wget --quiet --output-document=- https://api.github.com/repos/docker/compose/releases/latest | grep --perl-regexp --only-matching '"tag_name": "\K.*?(?=")')
-if [ ! -f /usr/local/bin/docker-compose ]; then
 sudo curl -L "https://github.com/docker/compose/releases/download/$compose/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
-else
-if [ "$compose" -gt `docker-compose --version | awk '{print $4}'` ]
-then
-echo "Your Docker-compose Older Version, Upgrade Docker-compose"
-sudo curl -L "https://github.com/docker/compose/releases/download/$compose/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-fi
-fi
 sudo rm -rf override.conf
 sudo setcap 'cap_net_bind_service=+eip' /opt/DECK/deck
 sudo sh -c "echo '/opt/DECK/' >> /etc/ld.so.conf.d/deck.conf"
